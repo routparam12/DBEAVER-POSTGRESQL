@@ -1,0 +1,1304 @@
+
+
+-- public.affilatenameandid source
+
+CREATE OR REPLACE VIEW public.affilatenameandid
+AS SELECT p."panelistId" AS panelistid,
+CASE
+WHEN p."sourceId" IS NOT NULL THEN am.affiliateid
+ELSE 44
+END AS affiliateid,
+CASE
+WHEN p."sourceId" IS NOT NULL THEN am.affiliatename
+ELSE 'organic'::character varying
+END AS affiliatename,
+p."updatedAt" AS updatedat
+FROM "Panelists" p
+LEFT JOIN ( SELECT amd."affiliateName" AS affiliatename,
+amd.id AS affiliateid
+FROM "AffiliateMasterDetails" amd
+GROUP BY amd.id, amd."createdAt") am ON am.affiliateid = p."sourceId";
+
+
+
+
+
+
+-- public.affiliate_aff source
+
+CREATE OR REPLACE VIEW public.affiliate_aff
+AS SELECT atd.id AS "Aff_id",
+atd."panelistId",
+atd."affiliateId",
+CASE
+WHEN atd."campaignId" IS NOT NULL THEN atd."campaignId"
+ELSE 'None'::character varying
+END AS "Campaign",
+(p."emailVerifyDate" AT TIME ZONE 'America/New_York'::text) AS "ATD_Date",
+atd."ipAddress",
+CASE
+WHEN p."isEmailVerified" = true THEN atd.cost
+ELSE NULL::double precision
+END AS cost,
+amd."affiliateName" AS "Aff_Name"
+FROM "AffiliateTrafficDetails" atd
+LEFT JOIN "AffiliateMasterDetails" amd ON atd."affiliateId" = amd.id
+LEFT JOIN "Panelists" p ON atd."panelistId" = p."panelistId"
+WHERE amd."affiliateName" IS NOT NULL;
+
+
+
+-- public.affiliate_pbi source
+
+CREATE OR REPLACE VIEW public.affiliate_pbi
+AS SELECT atd."affiliateId",
+p."panelistId",
+p."isActive",
+CASE
+WHEN p."isActive" = true THEN p."panelistId"
+ELSE NULL::integer
+END AS isactivepanelist,
+p."joinDate",
+to_char(p."joinDate", 'Mon'::text) AS month,
+ct."categoryType",
+usp.id AS starts,
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END AS complete,
+amd."affiliateName" AS affiliate,
+amd.cost AS affiliatecost,
+amd.id,
+atd.id AS hits,
+atd."ipAddress" AS uniquehits,
+CASE
+WHEN p."isEmailVerified" = true THEN p.email
+ELSE NULL::character varying
+END AS doi,
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END AS revenue,
+CASE
+WHEN usp."userStatus" = 2 THEN usp.cpi
+ELSE 0::numeric
+END AS cost,
+CASE
+WHEN usp."userStatus" = 16 THEN usp.cpi
+ELSE 0::numeric
+END AS reconcilecost,
+CASE
+WHEN usp."userStatus" = 16 THEN 1
+ELSE 0
+END AS reconcile,
+usp."createdAt" AS uspcreatedat,
+atd."createdAt" AS atdcreatedat,
+atd."updatedAt",
+c."countryName"
+FROM "AffiliateTrafficDetails" atd
+LEFT JOIN "Panelists" p ON p."panelistId" = atd."panelistId"
+LEFT JOIN "AffiliateMasterDetails" amd ON amd.id = atd."affiliateId"
+LEFT JOIN "UserSurveyParticipations" usp ON usp."panelistId" = p."panelistId"
+LEFT JOIN "Countries" c ON p."countryId" = c."countryId"
+LEFT JOIN "CategoryTypes" ct ON ct.id = p."categoryType"
+WHERE amd."affiliateName" IS NOT NULL;
+
+
+
+
+
+-- public.affiliatedetails source
+
+CREATE OR REPLACE VIEW public.affiliatedetails
+AS SELECT concat(COALESCE(atd.id, 0), '-', COALESCE(usp.id, 0), '-') AS id,
+atd.id AS atdid,
+p."panelistId" AS panelistid,
+atd."panelistId" AS atdpanelistid,
+date_part('month'::text, atd."createdAt") AS month,
+atd."countryCode" AS countrycode,
+amd."affiliateName" AS affiliatename,
+c."countryName" AS countryname,
+atd."updatedAt" AS atdupdatedat,
+amd."updatedAt" AS amdupdatedat,
+COALESCE(amd."ReportType", 'None'::character varying) AS reporttype,
+COALESCE(amd.cost, 0::double precision) AS affiliatecost,
+CASE
+WHEN amd."ReportType"::text = 'campaignId'::text THEN COALESCE(atd."campaignId", 'None'::character varying)
+WHEN amd."ReportType"::text = 'subCampaignId'::text THEN COALESCE(atd."subCampaignId", 'None'::character varying)
+ELSE 'None'::character varying
+END AS campaign,
+concat(p."firstName", '', p."lastName") AS name,
+p.email,
+p.gender,
+p."joinDate" AS joindate,
+p."isActive" AS isactive,
+p."updatedAt" AS pupdateat,
+p."sourceId" AS sourceid,
+p.device,
+p."lastLoginDate" AS lastlogindate,
+p."zipCode" AS zipcode,
+p."joinIp" AS joinip,
+p."lastLoginIp" AS lastloginip,
+p."categoryType" AS categorytype,
+p."levelId" AS levelid,
+p."isEmailVerified" AS isemailverified,
+usp."panelistId" AS usppanelistid,
+usp.id AS uspid,
+usp."surveyId" AS surveyid,
+usp."userStatus" AS userstatus,
+usp.cpi,
+usp."completeTime" AS completetime,
+usp."isReconcile" AS isreconcile,
+usp."completedPoints" AS completepoints,
+usp."createdAt" AS createdat,
+usp."updatedAt" AS updatedat,
+usp.ccpi,
+usp."ipAddress" AS ipaddress,
+atd."affiliateId" AS affiliateid,
+atd.browser,
+atd."createdAt" AS atdcreatedat,
+atd."ipAddress" AS atdipaddress,
+amd.id AS amdid,
+amd.cost,
+l.language,
+l.id AS languageid,
+l.languagecode,
+c."countryId" AS countryid,
+usp."surveyFrom" AS surveyfrom,
+ps."supplierId" AS supplierid,
+ps."updatedAt" AS psupdatedat,
+cl."clientName" AS clientname,
+cl.isactive AS clientisactive,
+cl.isapiclient,
+cl.clientid,
+cl.clientcode,
+COALESCE(usp."createdAt", atd."createdAt") AS uspatdcreatedat
+FROM "AffiliateTrafficDetails" atd
+LEFT JOIN "AffiliateMasterDetails" amd ON amd.id = atd."affiliateId"
+LEFT JOIN "UserSurveyParticipations" usp ON usp."panelistId" = atd."panelistId"
+LEFT JOIN "PanelSurveys" ps ON usp."surveyId" = ps.id
+LEFT JOIN "Panelists" p ON p."panelistId" = atd."panelistId"
+LEFT JOIN "Languages" l ON p."languageId" = l.id
+LEFT JOIN "Clients" cl ON cl.clientid = ps."clientId"
+LEFT JOIN "Countries" c ON c."countryCode"::text = atd."countryCode"::text
+LEFT JOIN "Countries" cc ON cc."countryId" = p."countryId"
+WHERE atd."affiliateId" IS NOT NULL;
+
+
+
+
+
+
+-- public.dailyaffilatedetail source
+
+CREATE OR REPLACE VIEW public.dailyaffilatedetail
+AS SELECT row_number() OVER () AS id,
+usp.year_month_day,
+usp.uniqueuser,
+usp.start,
+usp.totalcomplete,
+usp.reconcile,
+usp.organiccomplete,
+usp.sourcecomplete,
+usp.completecost,
+usp.totalrevenue,
+usp.reconcilepoint,
+usp.totalcost,
+usp.updatedat,
+p.p_date,
+p.totaluser,
+p.country_name,
+p.countrycode,
+p.source,
+p.organicuser,
+p.sourceuser,
+p.joindate,
+round(usp.totalcomplete::numeric * 100.0 / usp.start::numeric, 2) AS conversion,
+usp.totalcost - (usp.completecost + usp.reconcilepoint / 100::numeric) AS terminatecost,
+to_char(usp.year_month_day::date + '1 day'::interval, 'YYYY-MM-DD'::text) AS new_date,
+to_char(p.p_date::date + '1 day'::interval, 'YYYY-MM-DD'::text) AS panelist_new_date
+FROM ( SELECT concat(date_part('year'::text, timezone('America/New_York'::text, usp_1."createdAt")), '-', lpad(date_part('month'::text, timezone('America/New_York'::text, usp_1."createdAt"))::text, 2, '0'::text), '-', lpad(date_part('day'::text, timezone('America/New_York'::text, usp_1."createdAt"))::text, 2, '0'::text)) AS year_month_day,
+count(DISTINCT usp_1."panelistId") AS uniqueuser,
+count(usp_1.id) AS start,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN 1
+ELSE NULL::integer
+END) AS totalcomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 16 THEN 1
+ELSE NULL::integer
+END) AS reconcile,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 AND p_1."sourceId" IS NULL THEN 1
+ELSE 0
+END) AS organiccomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 AND p_1."sourceId" IS NOT NULL THEN 1
+ELSE 0
+END) AS sourcecomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN usp_1.cpi
+ELSE 0::numeric
+END) AS completecost,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN usp_1.ccpi
+ELSE 0::numeric
+END) AS totalrevenue,
+sum(
+CASE
+WHEN usp_1."userStatus" = 16 THEN usp_1.cpi * 100::numeric
+ELSE 0::numeric
+END) AS reconcilepoint,
+sum(pph.points)::numeric / 100.0 AS totalcost,
+max(usp_1."updatedAt") AS updatedat
+FROM "UserSurveyParticipations" usp_1
+JOIN "Panelists" p_1 ON p_1."panelistId" = usp_1."panelistId"
+LEFT JOIN "PanelistPointHistories" pph ON pph."panelistId" = usp_1."panelistId" AND pph."earnFromId" = usp_1."surveyId"
+GROUP BY (concat(date_part('year'::text, timezone('America/New_York'::text, usp_1."createdAt")), '-', lpad(date_part('month'::text, timezone('America/New_York'::text, usp_1."createdAt"))::text, 2, '0'::text), '-', lpad(date_part('day'::text, timezone('America/New_York'::text, usp_1."createdAt"))::text, 2, '0'::text)))) usp
+JOIN ( SELECT concat(date_part('year'::text, timezone('America/New_York'::text, p_1."createdAt")), '-', lpad(date_part('month'::text, timezone('America/New_York'::text, p_1."createdAt"))::text, 2, '0'::text), '-', lpad(date_part('day'::text, timezone('America/New_York'::text, p_1."createdAt"))::text, 2, '0'::text)) AS p_date,
+count(DISTINCT p_1."panelistId") AS totaluser,
+c."countryName" AS country_name,
+c."countryCode" AS countrycode,
+CASE
+WHEN p_1."sourceId" IS NOT NULL THEN amd."affiliateName"
+ELSE 'organic'::character varying
+END AS source,
+sum(
+CASE
+WHEN p_1."sourceId" IS NULL THEN 1
+ELSE 0
+END) AS organicuser,
+sum(
+CASE
+WHEN p_1."sourceId" IS NOT NULL THEN 1
+ELSE 0
+END) AS sourceuser,
+p_1."joinDate" AS joindate
+FROM "Panelists" p_1
+JOIN "Countries" c ON c."countryId" = p_1."countryId"
+LEFT JOIN "AffiliateMasterDetails" amd ON amd.id = p_1."sourceId"
+GROUP BY p_1."createdAt", c."countryName", (
+CASE
+WHEN p_1."sourceId" IS NOT NULL THEN amd."affiliateName"
+ELSE 'organic'::character varying
+END), p_1."updatedAt", p_1."joinDate", c."countryCode") p ON usp.year_month_day = p.p_date
+ORDER BY usp.year_month_day;
+
+
+
+
+-- public.dailydetails source
+
+CREATE OR REPLACE VIEW public.dailydetails
+AS WITH usp AS (
+SELECT to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text) AS year_month_day,
+count(DISTINCT usp_1."panelistId") AS uniqueuser,
+count(usp_1.id) AS start,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN 1
+ELSE 0
+END) AS totalcomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 16 THEN 1
+ELSE 0
+END) AS reconcile,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 AND p_1."sourceId" IS NULL THEN 1
+ELSE 0
+END) AS organiccomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 AND p_1."sourceId" IS NOT NULL THEN 1
+ELSE 0
+END) AS sourcecomplete,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN usp_1.cpi
+ELSE 0::numeric
+END) AS completecost,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN usp_1.ccpi
+ELSE 0::numeric
+END) AS totalrevenue,
+sum(
+CASE
+WHEN usp_1."userStatus" = 16 THEN usp_1.cpi * 100::numeric
+ELSE 0::numeric
+END) AS reconcilepoint,
+sum(pph.points)::numeric / 100.0 AS totalcost,
+max(usp_1."updatedAt") AS updatedat
+FROM "UserSurveyParticipations" usp_1
+JOIN "Panelists" p_1 ON p_1."panelistId" = usp_1."panelistId"
+LEFT JOIN "PanelistPointHistories" pph ON pph."panelistId" = usp_1."panelistId" AND pph."earnFromId" = usp_1."surveyId"
+GROUP BY (to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text))
+), p AS (
+SELECT to_char(timezone('America/New_York'::text, p_1."createdAt"), 'YYYY-MM-DD'::text) AS p_date,
+count(DISTINCT p_1."panelistId") AS totaluser,
+sum(
+CASE
+WHEN p_1."sourceId" IS NULL THEN 1
+ELSE 0
+END) AS organicuser,
+sum(
+CASE
+WHEN p_1."sourceId" IS NOT NULL THEN 1
+ELSE 0
+END) AS sourceuser,
+sum(
+CASE
+WHEN p_1."isEmailVerified" = true THEN 1
+ELSE 0
+END) AS totalverifiedem
+FROM "Panelists" p_1
+GROUP BY (to_char(timezone('America/New_York'::text, p_1."createdAt"), 'YYYY-MM-DD'::text))
+), direct_survey AS (
+SELECT to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text) AS day,
+count(*) AS directsureveystarts,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN 1
+ELSE 0
+END) AS directsureveycompletes
+FROM "UserSurveyParticipations" usp_1
+JOIN "PanelSurveys" ps ON usp_1."surveyId" = ps.id
+WHERE ps."supplierId" = 2
+GROUP BY (to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text))
+), bitlab_survey AS (
+SELECT to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text) AS day,
+count(*) AS bitlabsurveystarts,
+sum(
+CASE
+WHEN usp_1."userStatus" = 2 THEN 1
+ELSE 0
+END) AS bitlabsurveycompletes
+FROM "UserSurveyParticipations" usp_1
+JOIN "PanelSurveys" ps ON usp_1."surveyId" = ps.id
+WHERE ps."supplierId" = 3
+GROUP BY (to_char(timezone('America/New_York'::text, usp_1."createdAt"), 'YYYY-MM-DD'::text))
+)
+SELECT usp.year_month_day,
+usp.uniqueuser,
+usp.start,
+COALESCE(ds.directsureveystarts, 0::bigint) AS directsureveystarts,
+COALESCE(ds.directsureveycompletes, 0::bigint) AS directsureveycompletes,
+COALESCE(bb.bitlabsurveystarts, 0::bigint) AS bitlabsurveystarts,
+COALESCE(bb.bitlabsurveycompletes, 0::bigint) AS bitlabsurveycompletes,
+usp.totalcomplete,
+usp.reconcile,
+usp.organiccomplete,
+usp.sourcecomplete,
+usp.completecost,
+usp.totalrevenue,
+usp.reconcilepoint,
+usp.totalcost,
+usp.updatedat,
+p.p_date,
+p.totaluser,
+p.organicuser,
+p.sourceuser,
+p.totalverifiedem,
+round(usp.totalcomplete::numeric * 100.0 / NULLIF(usp.start, 0)::numeric, 2) AS conversion,
+usp.totalcost - (usp.completecost + usp.reconcilepoint / 100.0) AS terminatecost,
+to_char(usp.year_month_day::date + '1 day'::interval, 'YYYY-MM-DD'::text) AS new_date,
+to_char(p.p_date::date + '1 day'::interval, 'YYYY-MM-DD'::text) AS panelist_new_date
+FROM usp
+JOIN p ON usp.year_month_day = p.p_date
+LEFT JOIN direct_survey ds ON usp.year_month_day = ds.day
+LEFT JOIN bitlab_survey bb ON usp.year_month_day = bb.day;
+
+
+
+
+
+-- public.dailyrank source
+
+CREATE OR REPLACE VIEW public.dailyrank
+AS SELECT concat_ws('-'::text, p."panelistId", COALESCE(dr.id, 0::bigint)) AS id,
+p."panelistId" AS panelistid,
+p."categoryType" AS categorytype,
+concat(p."firstName", '', p."lastName") AS name,
+p."levelId" AS levelid,
+p.email,
+dr.createdat AS drcreated,
+dr.panelistid AS drpanelistid,
+COALESCE(dr.dailyrank, 0::bigint) AS drdailyrank,
+COALESCE(dr.engagementscore, 0::bigint) AS drengagementscore,
+dr.report_date
+FROM "Panelists" p
+LEFT JOIN "DailyRankings" dr ON dr.panelistid = p."panelistId";
+
+
+
+
+-- public.emailsenddetails source
+
+CREATE OR REPLACE VIEW public.emailsenddetails
+AS SELECT to_char(timezone('UTC'::text, eb."createdAt")::date + '1 day'::interval, 'YYYY-MM-DD'::text) AS newdate,
+to_char(timezone('UTC'::text, eb."createdAt")::date::timestamp with time zone, 'YYYY-MM-DD'::text) AS todaydate,
+sum(
+CASE
+WHEN eb."emailType" = 1 THEN eb."batchSize"::integer
+ELSE 0
+END) AS autobatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 1 THEN eb."actualSent"::integer
+ELSE 0
+END) AS autoactualsent,
+sum(
+CASE
+WHEN eb."emailType" = 2 THEN eb."batchSize"::integer
+ELSE 0
+END) AS manualbatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 2 THEN eb."actualSent"::integer
+ELSE 0
+END) AS manualactualsent,
+sum(
+CASE
+WHEN eb."emailType" = 3 THEN eb."batchSize"::integer
+ELSE 0
+END) AS genericbatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 3 THEN eb."actualSent"::integer
+ELSE 0
+END) AS genericactualsent,
+max(eb."updatedAt") AS latestupdatedat,
+max(eb."createdAt") AS latestcreatedat
+FROM "EmailBatches" eb
+GROUP BY (timezone('UTC'::text, eb."createdAt")::date)
+ORDER BY (to_char(timezone('UTC'::text, eb."createdAt")::date::timestamp with time zone, 'YYYY-MM-DD'::text)) DESC;
+
+
+
+
+-- public.emailsendsummary source
+
+CREATE OR REPLACE VIEW public.emailsendsummary
+AS WITH emailsummary AS (
+SELECT to_char(date((eb."createdAt" AT TIME ZONE 'America/New_York'::text)) + '1 day'::interval, 'YYYY-MM-DD'::text) AS newdate,
+to_char(date((eb."createdAt" AT TIME ZONE 'America/New_York'::text))::timestamp with time zone, 'YYYY-MM-DD'::text) AS todaydate,
+sum(
+CASE
+WHEN eb."emailType" = 1 THEN COALESCE(eb."batchSize"::integer, 0)
+ELSE 0
+END) AS autobatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 1 THEN COALESCE(eb."actualSent"::integer, 0)
+ELSE 0
+END) AS autoactualsent,
+sum(
+CASE
+WHEN eb."emailType" = 2 THEN COALESCE(eb."batchSize"::integer, 0)
+ELSE 0
+END) AS manualbatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 2 THEN COALESCE(eb."actualSent"::integer, 0)
+ELSE 0
+END) AS manualactualsent,
+sum(
+CASE
+WHEN eb."emailType" = 3 THEN COALESCE(eb."batchSize"::integer, 0)
+ELSE 0
+END) AS genericbatchsize,
+sum(
+CASE
+WHEN eb."emailType" = 3 THEN COALESCE(eb."actualSent"::integer, 0)
+ELSE 0
+END) AS genericactualsent,
+max(eb."updatedAt") AS latestupdatedat,
+max(eb."createdAt") AS latestcreatedat
+FROM "EmailBatches" eb
+GROUP BY (date((eb."createdAt" AT TIME ZONE 'America/New_York'::text)))
+), usersurveystats AS (
+SELECT to_char(date((usp."createdAt" AT TIME ZONE 'America/New_York'::text))::timestamp with time zone, 'YYYY-MM-DD'::text) AS todaydate,
+count(usp.id) AS uspid,
+max(usp."createdAt") AS createdat,
+max(usp."updatedAt") AS updatedat
+FROM "UserSurveyParticipations" usp
+GROUP BY (date((usp."createdAt" AT TIME ZONE 'America/New_York'::text)))
+), clicks_by_day AS (
+SELECT to_char(timezone('UTC'::text, "EmailRecipientsLogs"."clickDate")::date::timestamp with time zone, 'YYYY-MM-DD'::text) AS todaydate,
+count(*) AS clickcount
+FROM "EmailRecipientsLogs"
+WHERE "EmailRecipientsLogs"."clickDate" IS NOT NULL
+GROUP BY (timezone('UTC'::text, "EmailRecipientsLogs"."clickDate")::date)
+)
+SELECT COALESCE(es.newdate, to_char(uss.todaydate::date + '1 day'::interval, 'YYYY-MM-DD'::text)) AS newdate,
+COALESCE(es.todaydate, uss.todaydate, cbd.todaydate) AS todaydate,
+COALESCE(es.autobatchsize, 0::bigint) AS autobatchsize,
+COALESCE(es.autoactualsent, 0::bigint) AS autoactualsent,
+COALESCE(es.manualbatchsize, 0::bigint) AS manualbatchsize,
+COALESCE(es.manualactualsent, 0::bigint) AS manualactualsent,
+COALESCE(es.genericbatchsize, 0::bigint) AS genericbatchsize,
+COALESCE(es.genericactualsent, 0::bigint) AS genericactualsent,
+COALESCE(es.latestupdatedat, NULL::timestamp with time zone) AS latestupdatedat,
+COALESCE(es.latestcreatedat, NULL::timestamp with time zone) AS latestcreatedat,
+COALESCE(uss.uspid, 0::bigint) AS uspid,
+COALESCE(uss.createdat, NULL::timestamp with time zone) AS createdat,
+COALESCE(uss.updatedat, NULL::timestamp with time zone) AS updatedat,
+COALESCE(cbd.clickcount, 0::bigint) AS clickcount
+FROM emailsummary es
+FULL JOIN usersurveystats uss ON es.todaydate = uss.todaydate
+FULL JOIN clicks_by_day cbd ON COALESCE(es.todaydate, uss.todaydate) = cbd.todaydate
+ORDER BY (COALESCE(es.todaydate, uss.todaydate, cbd.todaydate)) DESC;
+
+
+
+
+-- public.joindetails source
+
+CREATE OR REPLACE VIEW public.joindetails
+AS SELECT concat(COALESCE(p."panelistId", 0), '-', atd."createdAt", '-', COALESCE(atd."countryCode", '0'::character varying), '-', COALESCE(amd."affiliateName", '0'::character varying)) AS id,
+p."panelistId" AS panelistid,
+date_part('month'::text, atd."createdAt") AS month,
+atd."countryCode" AS countrycode,
+amd."affiliateName" AS affiliatename,
+CASE
+WHEN amd."affiliateName" IS NULL THEN 'organic'::character varying
+ELSE amd."affiliateName"
+END AS source,
+count(DISTINCT atd."ipAddress") AS uniquehit,
+sum(
+CASE
+WHEN atd."panelistId" IS NOT NULL THEN 1
+ELSE 0
+END) AS joins,
+sum(
+CASE
+WHEN atd."panelistId" IS NOT NULL AND p."isEmailVerified" = true THEN 1
+ELSE 0
+END) AS doi,
+c."countryName" AS countryname,
+CASE
+WHEN c."countryName" IS NULL THEN cc."countryName"
+ELSE c."countryName"
+END AS cn,
+atd."createdAt" AS createdat,
+p."joinDate" AS joindate,
+atd."updatedAt" AS atdupdatedat,
+amd."updatedAt" AS amdupdatedat,
+p."updatedAt" AS pupdatedat
+FROM "AffiliateTrafficDetails" atd
+JOIN "AffiliateMasterDetails" amd ON amd.id = atd."affiliateId"
+FULL JOIN "Panelists" p ON p."panelistId" = atd."panelistId"
+LEFT JOIN "Countries" c ON c."countryCode"::text = atd."countryCode"::text
+LEFT JOIN "Countries" cc ON cc."countryId" = p."countryId"
+GROUP BY (date_part('month'::text, atd."createdAt")), amd."affiliateName", atd."countryCode", atd."createdAt", c."countryName", p."joinDate", p."sourceId", p."panelistId", atd."updatedAt", amd."updatedAt", p."updatedAt", cc."countryName";
+
+
+
+
+-- public.live_survey_count source
+
+CREATE OR REPLACE VIEW public.live_survey_count
+AS SELECT count(DISTINCT ps."surveyCode") AS count
+FROM "PanelSurveys" ps
+WHERE ps."surveyStatus" = 'live'::"enum_PanelSurveys_surveyStatus";
+
+
+
+-- public.livereport_pi source
+
+CREATE OR REPLACE VIEW public.livereport_pi
+AS SELECT EXTRACT(hour FROM (usp."createdAt" AT TIME ZONE 'America/New_York'::text)) AS "Hour",
+(usp."createdAt" AT TIME ZONE 'America/New_York'::text)::date AS date,
+(usp."updatedAt" AT TIME ZONE 'America/New_York'::text)::date AS updatetime,
+sf.name AS surveyfromname,
+sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END) AS starts,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END) AS complete,
+round(sum(
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END)::numeric / NULLIF(sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END)::numeric, 0::numeric), 4) * 100::numeric AS conversion,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END) AS revenue,
+round(sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END) / NULLIF(sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END)::numeric, 0::numeric), 2) AS epc,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.cpi
+ELSE 0::numeric
+END) AS cost
+FROM "UserSurveyParticipations" usp
+LEFT JOIN "SurveyFroms" sf ON sf.id = usp."surveyFrom"
+WHERE (usp."createdAt" AT TIME ZONE 'America/New_York'::text) >= (now() - '7 days'::interval)
+GROUP BY (EXTRACT(hour FROM (usp."createdAt" AT TIME ZONE 'America/New_York'::text))), ((usp."createdAt" AT TIME ZONE 'America/New_York'::text)::date), ((usp."updatedAt" AT TIME ZONE 'America/New_York'::text)::date), sf.name;
+
+
+
+
+-- public.livereports_pi source
+
+CREATE OR REPLACE VIEW public.livereports_pi
+AS SELECT EXTRACT(hour FROM (usp."createdAt" AT TIME ZONE 'America/New_York'::text)) AS "Hour",
+(usp."createdAt" AT TIME ZONE 'America/New_York'::text)::date AS date,
+(usp."updatedAt" AT TIME ZONE 'America/New_York'::text) AS updatetime,
+sf.name AS surveyfromname,
+sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END) AS starts,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END) AS complete,
+round(sum(
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END)::numeric / NULLIF(sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END)::numeric, 0::numeric), 4) * 100::numeric AS conversion,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END) AS revenue,
+round(sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END) / NULLIF(sum(
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END)::numeric, 0::numeric), 2) AS epc,
+sum(
+CASE
+WHEN usp."userStatus" = 2 THEN usp.cpi
+ELSE 0::numeric
+END) AS cost,
+ls.live_survey
+FROM "UserSurveyParticipations" usp
+LEFT JOIN "SurveyFroms" sf ON sf.id = usp."surveyFrom"
+CROSS JOIN ( SELECT count(DISTINCT ps.id) AS live_survey
+FROM "PanelSurveys" ps
+WHERE ps."surveyStatus" = 'live'::"enum_PanelSurveys_surveyStatus") ls
+GROUP BY (EXTRACT(hour FROM (usp."createdAt" AT TIME ZONE 'America/New_York'::text))), ((usp."createdAt" AT TIME ZONE 'America/New_York'::text)::date), ((usp."updatedAt" AT TIME ZONE 'America/New_York'::text)), sf.name, ls.live_survey;
+
+
+
+
+-- public.monthlyrank source
+
+CREATE OR REPLACE VIEW public.monthlyrank
+AS SELECT concat_ws('-'::text, p."panelistId", COALESCE(mr.id, 0::bigint)) AS id,
+p."panelistId" AS panelistid,
+p."categoryType" AS categorytype,
+concat(p."firstName", '', p."lastName") AS name,
+p."levelId" AS levelid,
+p.email,
+mr.createdat AS drcreated,
+mr.panelistid AS mrpanelistid,
+COALESCE(mr.monthrank, 0::bigint) AS monthrank,
+COALESCE(mr.engagementscore, 0::bigint) AS engagementscore,
+mr.report_date
+FROM "Panelists" p
+LEFT JOIN "MonthlyRankings" mr ON mr.panelistid = p."panelistId";
+
+
+
+-- public.panelist_aff source
+
+CREATE OR REPLACE VIEW public.panelist_aff
+AS SELECT p."panelistId" AS "User_id",
+p."isActive" AS "Active",
+p."isEmailVerified" AS "EmailV",
+p."sourceId" AS "SourceId",
+ct."categoryType" AS "Category",
+c."countryName" AS "Country",
+(p."emailVerifyDate" AT TIME ZONE 'America/New_York'::text) AS "CreatedAt",
+CASE
+WHEN p."createdAt" < date_trunc('month'::text, CURRENT_DATE::timestamp with time zone) THEN 1
+ELSE 0
+END AS "Not_joined_this_month",
+COALESCE(ph."PPH_Point", 0::numeric) AS "PPH_Point_Value",
+po."Games_rev"
+FROM "Panelists" p
+LEFT JOIN "Countries" c ON p."countryId" = c."countryId"
+LEFT JOIN "CategoryTypes" ct ON p."categoryType" = ct.id
+LEFT JOIN ( SELECT pph."panelistId",
+sum(
+CASE
+WHEN pph."pointTypeId" <> 1 THEN pph.points::numeric / 100.0
+ELSE 0::numeric
+END) AS "PPH_Point"
+FROM "PanelistPointHistories" pph
+GROUP BY pph."panelistId") ph ON p."panelistId" = ph."panelistId"
+LEFT JOIN ( SELECT pop."panelistId",
+sum(COALESCE(pop."pointsAwarded", 0)::numeric / 100.0 / NULLIF(pop.cpi, 0::numeric) * pop.ccpi) AS "Games_rev"
+FROM "PanelistOfferProgresses" pop
+WHERE pop.status::text = 'COMPLETED'::text AND pop.completed = true
+GROUP BY pop."panelistId") po ON po."panelistId" = p."panelistId"
+WHERE p."sourceId" IS NOT NULL;
+
+
+
+-- public.pg_buffercache source
+
+CREATE OR REPLACE VIEW public.pg_buffercache
+AS SELECT p.bufferid,
+p.relfilenode,
+p.reltablespace,
+p.reldatabase,
+p.relforknumber,
+p.relblocknumber,
+p.isdirty,
+p.usagecount,
+p.pinning_backends
+FROM pg_buffercache_pages() p(bufferid integer, relfilenode oid, reltablespace oid, reldatabase oid, relforknumber smallint, relblocknumber bigint, isdirty boolean, usagecount smallint, pinning_backends integer);
+
+
+
+
+-- public.pg_stat_statements source
+
+CREATE OR REPLACE VIEW public.pg_stat_statements
+AS SELECT pg_stat_statements.userid,
+pg_stat_statements.dbid,
+pg_stat_statements.toplevel,
+pg_stat_statements.queryid,
+pg_stat_statements.query,
+pg_stat_statements.plans,
+pg_stat_statements.total_plan_time,
+pg_stat_statements.min_plan_time,
+pg_stat_statements.max_plan_time,
+pg_stat_statements.mean_plan_time,
+pg_stat_statements.stddev_plan_time,
+pg_stat_statements.calls,
+pg_stat_statements.total_exec_time,
+pg_stat_statements.min_exec_time,
+pg_stat_statements.max_exec_time,
+pg_stat_statements.mean_exec_time,
+pg_stat_statements.stddev_exec_time,
+pg_stat_statements.rows,
+pg_stat_statements.shared_blks_hit,
+pg_stat_statements.shared_blks_read,
+pg_stat_statements.shared_blks_dirtied,
+pg_stat_statements.shared_blks_written,
+pg_stat_statements.local_blks_hit,
+pg_stat_statements.local_blks_read,
+pg_stat_statements.local_blks_dirtied,
+pg_stat_statements.local_blks_written,
+pg_stat_statements.temp_blks_read,
+pg_stat_statements.temp_blks_written,
+pg_stat_statements.blk_read_time,
+pg_stat_statements.blk_write_time,
+pg_stat_statements.wal_records,
+pg_stat_statements.wal_fpi,
+pg_stat_statements.wal_bytes
+FROM pg_stat_statements(true) pg_stat_statements(userid, dbid, toplevel, queryid, query, plans, total_plan_time, min_plan_time, max_plan_time, mean_plan_time, stddev_plan_time, calls, total_exec_time, min_exec_time, max_exec_time, mean_exec_time, stddev_exec_time, rows, shared_blks_hit, shared_blks_read, shared_blks_dirtied, shared_blks_written, local_blks_hit, local_blks_read, local_blks_dirtied, local_blks_written, temp_blks_read, temp_blks_written, blk_read_time, blk_write_time, wal_records, wal_fpi, wal_bytes);
+
+
+
+
+-- public.pg_stat_statements_info source
+
+CREATE OR REPLACE VIEW public.pg_stat_statements_info
+AS SELECT pg_stat_statements_info.dealloc,
+pg_stat_statements_info.stats_reset
+FROM pg_stat_statements_info() pg_stat_statements_info(dealloc, stats_reset);
+
+
+
+-- public.prr_aff source
+
+CREATE OR REPLACE VIEW public.prr_aff
+AS SELECT prr.id AS "Redemption_id",
+prr."panelistId",
+(prr."createdAt" AT TIME ZONE 'America/New_York'::text) AS "Redemption_date",
+CASE
+WHEN prr.status = 'approved'::"enum_PanelistRedemptionRequests_status" THEN prr.amount
+ELSE 0::double precision
+END AS "Redeemed"
+FROM "PanelistRedemptionRequests" prr;
+
+
+
+
+-- public.redeempbi source
+
+CREATE OR REPLACE VIEW public.redeempbi
+AS SELECT amd."affiliateName",
+atd."affiliateId",
+atd."panelistId",
+CASE
+WHEN prr.status = 'approved'::"enum_PanelistRedemptionRequests_status" THEN prr.amount
+ELSE 0::double precision
+END AS "Redeemed",
+atd."createdAt" AS atdcreatedat,
+atd."updatedAt",
+c."countryName",
+prr."createdAt" AS prrdate
+FROM "AffiliateTrafficDetails" atd
+LEFT JOIN "Panelists" p ON p."panelistId" = atd."panelistId"
+LEFT JOIN "Countries" c ON p."countryId" = c."countryId"
+LEFT JOIN "CategoryTypes" ct ON ct.id = p."categoryType"
+LEFT JOIN "PanelistRedemptionRequests" prr ON atd."panelistId" = prr."panelistId"
+LEFT JOIN "AffiliateMasterDetails" amd ON amd.id = atd."affiliateId";
+
+
+
+-- public.testdaily source
+
+CREATE OR REPLACE VIEW public.testdaily
+AS SELECT p."panelistId",
+sum(p.points) AS point
+FROM "PanelistPointHistories" p
+WHERE date_part('year'::text, p."createdAt") = 2024::double precision AND date_part('month'::text, p."createdAt") = 2::double precision AND date_part('day'::text, p."createdAt") = 13::double precision AND p."pointTypeId" = 5
+GROUP BY p."panelistId";
+
+
+
+-- public.unipanel source
+
+CREATE OR REPLACE VIEW public.unipanel
+AS SELECT p."panelistId" AS panelistid,
+p."firstName" AS firstname,
+p."lastName" AS lastname,
+p.gender,
+p.age,
+p."panelistName" AS panelistname,
+p."languageId" AS languageid,
+p."sourceId" AS sourceid,
+p.email,
+p."joinIp" AS joinip,
+p."lastLoginIp" AS lastloginip,
+p."countryId" AS countryid,
+p."isEmailVerified" AS isemailverified,
+p."joinDate" AS joindate,
+p."lastLoginDate" AS lastlogindate,
+p.unsubscribe,
+p."unsubscribeDate" AS unsubscribedate,
+p."createdAt" AS createdat,
+p."updatedAt" AS updatedat,
+atd.id AS atdid,
+atd."affiliateId" AS affiliateid,
+atd.browser,
+amd.id AS amdid,
+amd."affiliateName" AS affiliatename,
+amd.cost
+FROM "Panelists" p
+LEFT JOIN "AffiliateTrafficDetails" atd ON p."panelistId" = atd."panelistId"
+LEFT JOIN "AffiliateMasterDetails" amd ON atd."affiliateId" = amd.id;
+
+
+
+
+-- public.userdetailreport source
+
+CREATE OR REPLACE VIEW public.userdetailreport
+AS WITH usp_agg AS (
+SELECT usp."panelistId",
+count(*) FILTER (WHERE true) AS starts,
+count(*) FILTER (WHERE usp."userStatus" = 2) AS completes,
+count(*) FILTER (WHERE usp."userStatus" = 16) AS reconcile,
+count(*) FILTER (WHERE usp."userStatus" = 2 AND usp."createdAt" > (CURRENT_DATE - '3 mons'::interval)) AS completes3m,
+count(*) FILTER (WHERE usp."userStatus" = 16 AND usp."createdAt" > (CURRENT_DATE - '3 mons'::interval)) AS reconcile3m,
+sum(usp.cpi) FILTER (WHERE usp."userStatus" = 2) AS completecost,
+sum(usp.cpi) FILTER (WHERE usp."userStatus" = 16) AS reconcilecost,
+sum(usp.ccpi) FILTER (WHERE usp."userStatus" = 2) AS revenue,
+max(usp."updatedAt") AS uspupdatetime,
+max(usp."createdAt") AS lastsurveypartdate
+FROM "UserSurveyParticipations" usp
+GROUP BY usp."panelistId"
+), pph_agg AS (
+SELECT pph_1."panelistId",
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" <> 1) AS totalpoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = ANY (ARRAY[2, 5])) AS completepoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 5 OR pph_1."pointTypeId" = 2 AND pph_1.points <= 10) AS terminatepointsonly5,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 3) AS referpoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 4) AS minisurveypoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" <> 1) AS cost,
+max(pph_1."updatedAt") AS pphupdatetime
+FROM "PanelistPointHistories" pph_1
+GROUP BY pph_1."panelistId"
+), prr_agg AS (
+SELECT prr_1."panelistId",
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'approved'::"enum_PanelistRedemptionRequests_status") AS redeemedpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'disapproved'::"enum_PanelistRedemptionRequests_status") AS disapprovedpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'pending'::"enum_PanelistRedemptionRequests_status") AS pendingpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'hold'::"enum_PanelistRedemptionRequests_status") AS hold,
+max(prr_1."createdAt") AS redreqdate,
+max(prr_1."updatedAt") AS redrequpddate
+FROM "PanelistRedemptionRequests" prr_1
+GROUP BY prr_1."panelistId"
+), affiliate AS (
+SELECT "AffiliateMasterDetails".id AS affilateid,
+"AffiliateMasterDetails"."affiliateName" AS affiliatename
+FROM "AffiliateMasterDetails"
+), country AS (
+SELECT c."countryId",
+c."countryName" AS countryname,
+c."countryCode" AS countrycode
+FROM "Countries" c
+)
+SELECT p."panelistId" AS panelistid,
+concat(p."firstName", ' ', p."lastName") AS name,
+p.email,
+COALESCE(am.affiliatename, 'organic'::character varying) AS affiliatename,
+COALESCE(p.device, 3) AS device,
+COALESCE(u.starts, 0::bigint) AS starts,
+COALESCE(u.completes, 0::bigint) AS completes,
+COALESCE(u.completes3m, 0::bigint) AS completeslast3months,
+COALESCE(u.reconcile, 0::bigint) AS reconcile,
+COALESCE(u.reconcile3m, 0::bigint) AS reconcilelast3months,
+CASE
+WHEN (u.reconcile + u.completes) > 0 THEN round(u.reconcile::numeric * 100.0 / (u.completes + u.reconcile)::numeric, 2)
+ELSE 0::numeric
+END AS reconcilerate,
+CASE
+WHEN (u.reconcile3m + u.completes3m) > 0 THEN round(u.reconcile3m::numeric * 100.0 / (u.completes3m + u.reconcile3m)::numeric, 2)
+ELSE 0::numeric
+END AS reconcileratelast3months,
+COALESCE(pph.minisurveypoint, 0::bigint) AS minisurveypoint,
+COALESCE(pph.referpoint, 0::bigint) AS referpoint,
+COALESCE(prr.redeemedpoint, 0::bigint) AS redeemedpoint,
+COALESCE(prr.disapprovedpoint, 0::bigint) AS disapprovedpoint,
+COALESCE(prr.pendingpoint, 0::bigint) AS pendingpoint,
+CASE
+WHEN prr.pendingpoint > 0 THEN 'Yes'::text
+ELSE 'No'::text
+END AS pendingrequest,
+COALESCE(prr.hold, 0::bigint) AS holdpoint,
+COALESCE(u.completecost, 0::numeric) AS completescost,
+COALESCE(u.reconcilecost, 0::numeric)::numeric(10,2) AS reconcilecost,
+COALESCE(u.reconcilecost, 0::numeric) * 100::numeric AS reconcilepoint,
+COALESCE(u.completecost, 0::numeric) * 100::numeric AS completespoint,
+COALESCE(pph.completepoint, 0::bigint) AS surveypoint,
+COALESCE(pph.totalpoint, 0::bigint) AS totalpoint,
+COALESCE(pph.terminatepointsonly5, 0::bigint) AS terminatepointsonly5,
+COALESCE(pph.completepoint, 0::bigint)::numeric - (COALESCE(u.completecost, 0::numeric) + COALESCE(u.reconcilecost, 0::numeric)) * 100::numeric AS terminatepoint,
+(COALESCE(pph.completepoint, 0::bigint)::numeric - (COALESCE(u.completecost, 0::numeric) + COALESCE(u.reconcilecost, 0::numeric)) * 100::numeric) / 100::numeric AS terminatecost,
+((COALESCE(pph.completepoint, 0::bigint)::numeric - (COALESCE(u.completecost, 0::numeric) + COALESCE(u.reconcilecost, 0::numeric)) * 100::numeric) / NULLIF(COALESCE(pph.cost, 0::bigint)::numeric / 100.0, 0::numeric))::numeric(10,2) AS terminatepointpercentage,
+CASE
+WHEN (p.device = ANY (ARRAY[1, 2])) AND p."sourceId" IS NOT NULL THEN pph.cost::numeric / 100.0 + 4::numeric
+WHEN p.device = 3 AND p."sourceId" IS NOT NULL THEN pph.cost::numeric / 100.0 + 3::numeric
+ELSE pph.cost::numeric / 100.0
+END AS overallcost,
+CASE
+WHEN (p.device = ANY (ARRAY[1, 2])) AND p."sourceId" IS NOT NULL THEN 4
+WHEN p.device = 3 AND p."sourceId" IS NOT NULL THEN 3
+ELSE 0
+END AS affiliatecost,
+COALESCE(u.revenue, 0::numeric)::numeric(10,2) AS revenue,
+(COALESCE(u.revenue, 0::numeric) -
+CASE
+WHEN (p.device = ANY (ARRAY[1, 2])) AND p."sourceId" IS NOT NULL THEN pph.cost::numeric / 100.0 + 4::numeric
+WHEN p.device = 3 AND p."sourceId" IS NOT NULL THEN pph.cost::numeric / 100.0 + 3::numeric
+ELSE pph.cost::numeric / 100.0
+END)::numeric(10,2) AS profit,
+(COALESCE(u.revenue, 0::numeric) -
+CASE
+WHEN (p.device = ANY (ARRAY[1, 2])) AND p."sourceId" IS NOT NULL THEN COALESCE(prr.redeemedpoint, 0::bigint)::numeric / 100.0 + 4::numeric
+WHEN p.device = 3 AND p."sourceId" IS NOT NULL THEN COALESCE(prr.redeemedpoint, 0::bigint)::numeric / 100.0 + 3::numeric
+ELSE COALESCE(prr.redeemedpoint, 0::bigint)::numeric / 100.0
+END)::numeric(10,2) AS actualprofit,
+cn.countryname,
+cn.countrycode,
+COALESCE(pph.pphupdatetime, p."createdAt") AS pphupdatetime,
+COALESCE(u.uspupdatetime, p."createdAt") AS uspupdatetime,
+COALESCE(u.lastsurveypartdate, p."createdAt") AS lastsurveypartdate,
+prr.redreqdate,
+prr.redrequpddate,
+p."lastLoginDate" AS lastlogindate,
+p."joinDate" AS joindate,
+p."isActive" AS isactive,
+p."levelId" AS levelid,
+p."updatedAt" AS pupdatedtime,
+p."categoryType" AS categorytype,
+p."isSampleAllow" AS issampleallow
+FROM "Panelists" p
+LEFT JOIN usp_agg u ON u."panelistId" = p."panelistId"
+LEFT JOIN pph_agg pph ON pph."panelistId" = p."panelistId"
+LEFT JOIN prr_agg prr ON prr."panelistId" = p."panelistId"
+LEFT JOIN affiliate am ON am.affilateid = p."sourceId"
+LEFT JOIN country cn ON cn."countryId" = p."countryId";
+
+
+
+-- public.userdetailreport_timebase source
+
+CREATE OR REPLACE VIEW public.userdetailreport_timebase
+AS WITH usp_agg AS (
+SELECT usp."panelistId",
+date_trunc('minute'::text, usp."createdAt") AS minute_ts,
+count(*) AS starts,
+count(*) FILTER (WHERE usp."userStatus" = 2) AS completes,
+count(*) FILTER (WHERE usp."userStatus" = 16) AS reconcile,
+sum(usp.cpi) FILTER (WHERE usp."userStatus" = 2) AS completecost,
+sum(usp.cpi) FILTER (WHERE usp."userStatus" = 16) AS reconcilecost,
+sum(usp.ccpi) FILTER (WHERE usp."userStatus" = 2) AS revenue,
+max(usp."updatedAt") AS uspupdatetime
+FROM "UserSurveyParticipations" usp
+GROUP BY usp."panelistId", (date_trunc('minute'::text, usp."createdAt"))
+), pph_agg AS (
+SELECT pph_1."panelistId",
+date_trunc('minute'::text, pph_1."createdAt") AS minute_ts,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" <> 1) AS totalpoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = ANY (ARRAY[2, 5])) AS completepoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 5 OR pph_1."pointTypeId" = 2 AND pph_1.points <= 10) AS terminatepointsonly5,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 3) AS referpoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" = 4) AS minisurveypoint,
+sum(pph_1.points) FILTER (WHERE pph_1."pointTypeId" <> 1) AS cost,
+max(pph_1."updatedAt") AS pphupdatetime
+FROM "PanelistPointHistories" pph_1
+GROUP BY pph_1."panelistId", (date_trunc('minute'::text, pph_1."createdAt"))
+), prr_agg AS (
+SELECT prr_1."panelistId",
+date_trunc('minute'::text, prr_1."createdAt") AS minute_ts,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'approved'::"enum_PanelistRedemptionRequests_status") AS redeemedpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'disapproved'::"enum_PanelistRedemptionRequests_status") AS disapprovedpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'pending'::"enum_PanelistRedemptionRequests_status") AS pendingpoint,
+sum(prr_1.point) FILTER (WHERE prr_1.status = 'hold'::"enum_PanelistRedemptionRequests_status") AS hold,
+max(prr_1."updatedAt") AS redrequpddate
+FROM "PanelistRedemptionRequests" prr_1
+GROUP BY prr_1."panelistId", (date_trunc('minute'::text, prr_1."createdAt"))
+)
+SELECT u.minute_ts,
+p."panelistId" AS panelistid,
+p.email,
+COALESCE(u.starts, 0::bigint) AS starts,
+COALESCE(u.completes, 0::bigint) AS completes,
+COALESCE(u.reconcile, 0::bigint) AS reconcile,
+CASE
+WHEN (u.completes + u.reconcile) > 0 THEN round(u.reconcile::numeric * 100::numeric / (u.completes + u.reconcile)::numeric, 2)
+ELSE 0::numeric
+END AS reconcilerate,
+COALESCE(u.revenue, 0::numeric)::numeric(10,2) AS revenue,
+(COALESCE(u.completecost, 0::numeric) + COALESCE(u.reconcilecost, 0::numeric))::numeric(10,2) AS cost,
+(COALESCE(u.revenue, 0::numeric) - (COALESCE(u.completecost, 0::numeric) + COALESCE(u.reconcilecost, 0::numeric)))::numeric(10,2) AS profit,
+u.uspupdatetime
+FROM usp_agg u
+JOIN "Panelists" p ON p."panelistId" = u."panelistId"
+LEFT JOIN pph_agg pph ON pph."panelistId" = u."panelistId" AND pph.minute_ts = u.minute_ts
+LEFT JOIN prr_agg prr ON prr."panelistId" = u."panelistId" AND prr.minute_ts = u.minute_ts
+ORDER BY u.minute_ts;
+
+
+
+-- public.usp source
+
+CREATE OR REPLACE VIEW public.usp
+AS SELECT concat_ws('-'::text, p."panelistId", 'usp', COALESCE(usp.id, 0)) AS id,
+p."panelistId" AS panelistid,
+concat(p."firstName", '', p."lastName") AS name,
+p.email,
+p.gender,
+p."joinDate" AS joindate,
+p."isActive" AS isactive,
+p."updatedAt" AS pupdateat,
+p."sourceId" AS sourceid,
+p.device,
+p."lastLoginDate" AS lastlogindate,
+p."zipCode" AS zipcode,
+p."joinIp" AS joinip,
+p."lastLoginIp" AS lastloginip,
+p."categoryType" AS categorytype,
+p."levelId" AS levelid,
+usp.id AS uspid,
+usp."surveyId" AS surveyid,
+usp."userStatus" AS userstatus,
+usp.cpi,
+usp."completeTime" AS completetime,
+usp."isReconcile" AS isreconcile,
+usp."completedPoints" AS completepoints,
+usp."createdAt" AS createdat,
+usp."updatedAt" AS updatedat,
+usp.ccpi,
+usp."ipAddress" AS ipaddress,
+atd.id AS atdid,
+atd."affiliateId" AS affiliateid,
+atd.browser,
+amd.id AS amdid,
+amd."affiliateName" AS affiliatename,
+amd.cost,
+l.language,
+l.id AS languageid,
+l.languagecode,
+c."countryCode" AS countrycode,
+c."countryId" AS countryid,
+c."countryName" AS countryname,
+usp."surveyFrom" AS surveyfrom,
+ps."supplierId" AS supplierid,
+ps."updatedAt" AS psupdatedat
+FROM "Panelists" p
+LEFT JOIN "UserSurveyParticipations" usp ON p."panelistId" = usp."panelistId"
+LEFT JOIN "PanelSurveys" ps ON usp."surveyId" = ps.id
+LEFT JOIN "AffiliateTrafficDetails" atd ON p."panelistId" = atd."panelistId"
+LEFT JOIN "AffiliateMasterDetails" amd ON atd."affiliateId" = amd.id
+JOIN "Languages" l ON p."languageId" = l.id
+JOIN "Countries" c ON p."countryId" = c."countryId"
+WHERE ps."supplierId" <> 1;
+
+
+
+
+-- public.usp_activity_aff source
+
+CREATE OR REPLACE VIEW public.usp_activity_aff
+AS WITH usp_monthly AS (
+SELECT usp."panelistId",
+date_trunc('month'::text, (usp."createdAt" AT TIME ZONE 'America/New_York'::text)) AS "UspActivityMonth"
+FROM "UserSurveyParticipations" usp
+GROUP BY usp."panelistId", (date_trunc('month'::text, (usp."createdAt" AT TIME ZONE 'America/New_York'::text)))
+)
+SELECT um."panelistId",
+um."UspActivityMonth",
+date_trunc('month'::text, (atd."createdAt" AT TIME ZONE 'America/New_York'::text)) AS "AtdCreatedAt"
+FROM usp_monthly um
+JOIN "AffiliateTrafficDetails" atd ON um."panelistId" = atd."panelistId";
+
+
+
+-- public.usp_aff source
+
+CREATE OR REPLACE VIEW public.usp_aff
+AS SELECT usp."panelistId",
+(usp."createdAt" AT TIME ZONE 'America/New_York'::text) AS "Survey_date",
+CASE
+WHEN usp."userStatus" IS NOT NULL THEN 1
+ELSE 0
+END AS "Starts",
+CASE
+WHEN usp."userStatus" = 2 THEN 1
+ELSE 0
+END AS "Complete",
+CASE
+WHEN usp."userStatus" = 2 THEN usp.cpi
+ELSE 0::numeric
+END AS "Cost",
+CASE
+WHEN usp."userStatus" = 2 THEN usp.ccpi
+ELSE 0::numeric
+END AS "Revenue",
+CASE
+WHEN usp."isReconcile" = true THEN 1
+ELSE 0
+END AS "Reconcile"
+FROM "UserSurveyParticipations" usp
+LEFT JOIN "Panelists" p ON usp."panelistId" = p."panelistId"
+WHERE p."sourceId" IS NOT NULL;
+
+
+
+
+-- public.uspdetail source
+
+CREATE OR REPLACE VIEW public.uspdetail
+AS SELECT concat_ws('-'::text, p."panelistId", 'usp', COALESCE(usp.id, 0)) AS id,
+p."panelistId" AS panelistid,
+concat(p."firstName", '', p."lastName") AS name,
+p.email,
+p.gender,
+p."joinDate" AS joindate,
+p."isActive" AS isactive,
+p."updatedAt" AS pupdateat,
+p."sourceId" AS sourceid,
+p.device,
+p."lastLoginDate" AS lastlogindate,
+p."zipCode" AS zipcode,
+p."joinIp" AS joinip,
+p."lastLoginIp" AS lastloginip,
+p."categoryType" AS categorytype,
+p."levelId" AS levelid,
+usp.id AS uspid,
+usp."surveyId" AS surveyid,
+usp."userStatus" AS userstatus,
+usp.cpi,
+usp."completeTime" AS completetime,
+usp."isReconcile" AS isreconcile,
+usp."completedPoints" AS completepoints,
+usp."createdAt" AS createdat,
+usp."updatedAt" AS updatedat,
+usp.ccpi,
+usp."ipAddress" AS ipaddress,
+atd.id AS atdid,
+atd."affiliateId" AS affiliateid,
+atd.browser,
+atd."createdAt" AS atdcreatedat,
+atd."ipAddress" AS atdipaddress,
+amd.id AS amdid,
+amd."affiliateName" AS affiliatename,
+amd.cost,
+COALESCE(amd."ReportType", 'None'::character varying) AS reporttype,
+COALESCE(amd.cost, 0::double precision) AS affiliatecost,
+CASE
+WHEN amd."ReportType"::text = 'campaignId'::text THEN COALESCE(atd."campaignId", 'None'::character varying)
+WHEN amd."ReportType"::text = 'subCampaignId'::text THEN COALESCE(atd."subCampaignId", 'None'::character varying)
+ELSE 'None'::character varying
+END AS campaign,
+l.language,
+l.id AS languageid,
+l.languagecode,
+c."countryCode" AS countrycode,
+c."countryId" AS countryid,
+c."countryName" AS countryname,
+usp."surveyFrom" AS surveyfrom,
+ps."supplierId" AS supplierid,
+ps."updatedAt" AS psupdatedat,
+dr.createdat AS drcreated,
+dr.panelistid AS drpanelistid,
+dr.dailyrank AS drdailyrank,
+dr.engagementscore AS drengagementscore,
+mr.engagementscore AS mrengagementscore,
+mr.panelistid AS mrpanelistid,
+mr.monthrank AS mrmonthrank,
+mr.createdat AS mrcreated,
+cl."clientName" AS clientname,
+cl.isactive AS clientisactive,
+cl.isapiclient,
+cl.clientid,
+cl.clientcode
+FROM "Panelists" p
+LEFT JOIN "UserSurveyParticipations" usp ON p."panelistId" = usp."panelistId"
+LEFT JOIN "PanelSurveys" ps ON usp."surveyId" = ps.id
+LEFT JOIN "AffiliateTrafficDetails" atd ON p."panelistId" = atd."panelistId"
+LEFT JOIN "AffiliateMasterDetails" amd ON atd."affiliateId" = amd.id
+LEFT JOIN "DailyRankings" dr ON dr.panelistid = p."panelistId" AND dr.report_date = date(usp."createdAt")
+LEFT JOIN "MonthlyRankings" mr ON mr.panelistid = p."panelistId" AND mr.report_date = date(usp."createdAt")
+JOIN "Languages" l ON p."languageId" = l.id
+JOIN "Countries" c ON p."countryId" = c."countryId"
+LEFT JOIN "Clients" cl ON cl.clientid = ps."clientId";
